@@ -1,8 +1,8 @@
-use core::convert::TryFrom;
 use embedded_graphics_core::{
     geometry::Size,
     pixelcolor::{Rgb888, RgbColor},
 };
+use rand::prelude::*;
 
 use nalgebra::Vector3;
 
@@ -13,25 +13,17 @@ where
     Vector3::<i32>::new(color.r() as i32, color.g() as i32, color.b() as i32)
 }
 
-pub fn vector_to_color(color: Vector3<i32>) -> Result<[u8; 3], <u8 as TryFrom<i32>>::Error> {
-    Ok([
-        color[0].try_into()?,
-        color[1].try_into()?,
-        color[2].try_into()?,
-    ])
-}
-
 pub fn vector_to_colora(color: Vector3<i32>) -> Rgb888 {
     Rgb888::new(
-        color[0].try_into().unwrap_or(0x00),
-        color[1].try_into().unwrap_or(0x00),
-        color[2].try_into().unwrap_or(0x00),
+        color[0].clamp(0, 255).try_into().unwrap_or(0x00),
+        color[1].clamp(0, 255).try_into().unwrap_or(0x00),
+        color[2].clamp(0, 255).try_into().unwrap_or(0x00),
     )
 }
 
 pub fn dither<F, I>(pixels: I, size: Size, f: F) -> impl Iterator<Item = Rgb888>
 where
-    F: Fn(Rgb888) -> Rgb888,
+    F: Fn(Vector3<i32>) -> Vector3<i32>,
     I: Iterator<Item = Rgb888>,
 {
     let pixels_copy_a: Vec<Vector3<i32>> = pixels.map(color_to_vector).collect();
@@ -51,7 +43,7 @@ where
                 size.width as usize - 1 - x
             };
             let oldpixel = row[x];
-            let newpixel = color_to_vector(f(vector_to_colora(oldpixel)));
+            let newpixel = f(oldpixel);
             row[x] = newpixel;
             let quant_error = oldpixel - newpixel;
 
@@ -110,32 +102,55 @@ fn test_dither() {
     )
 }
 
-const CGA_PALETTE: [Rgb888; 14] = [
-    Rgb888::new(0x00, 0x00, 0x00),
-    Rgb888::new(0x00, 0x00, 0xAA),
-    Rgb888::new(0x00, 0xAA, 0x00),
-    Rgb888::new(0x00, 0xAA, 0xAA),
-    Rgb888::new(0xAA, 0x00, 0x00),
-    Rgb888::new(0xAA, 0x00, 0xAA),
-    Rgb888::new(0xAA, 0xAA, 0xAA),
-    Rgb888::new(0xAA, 0x55, 0x00),
-    Rgb888::new(0xff, 0xff, 0xff),
-    Rgb888::new(0x55, 0x55, 0x55),
-    Rgb888::new(0x55, 0x55, 0xFF),
-    Rgb888::new(0xFF, 0xFF, 0x55),
-    Rgb888::new(0xFF, 0x55, 0x55),
-    Rgb888::new(0x55, 0xFF, 0x55),
+const CGA_PALETTE: [Vector3<i32>; 14] = [
+    Vector3::<i32>::new(0x00, 0x00, 0x00),
+    Vector3::<i32>::new(0x00, 0x00, 0xAA),
+    Vector3::<i32>::new(0x00, 0xAA, 0x00),
+    Vector3::<i32>::new(0x00, 0xAA, 0xAA),
+    Vector3::<i32>::new(0xAA, 0x00, 0x00),
+    Vector3::<i32>::new(0xAA, 0x00, 0xAA),
+    Vector3::<i32>::new(0xAA, 0xAA, 0xAA),
+    Vector3::<i32>::new(0xAA, 0x55, 0x00),
+    Vector3::<i32>::new(0xff, 0xff, 0xff),
+    Vector3::<i32>::new(0x55, 0x55, 0x55),
+    Vector3::<i32>::new(0x55, 0x55, 0xFF),
+    Vector3::<i32>::new(0xFF, 0xFF, 0x55),
+    Vector3::<i32>::new(0xFF, 0x55, 0x55),
+    Vector3::<i32>::new(0x55, 0xFF, 0x55),
 ];
 
-pub fn closest(pixel: Rgb888) -> Rgb888 {
+pub fn closest(pixel: Vector3<i32>) -> Vector3<i32> {
     CGA_PALETTE
         .into_iter()
         .min_by_key(|cga| {
-            let r = pixel.r().abs_diff(cga.r()) as u32;
-            let g = pixel.g().abs_diff(cga.g()) as u32;
-            let b = pixel.b().abs_diff(cga.b()) as u32;
+            let r = pixel[0] - cga[0];
+            let g = pixel[1] - cga[1];
+            let b = pixel[2] - cga[2];
 
             r * r + g * g + b * b
         })
         .unwrap()
+}
+
+fn distance(pixel: Vector3<i32>, cga: Vector3<i32>) -> i32 {
+    let r = pixel[0] - cga[0];
+    let g = pixel[1] - cga[1];
+    let b = pixel[2] - cga[2];
+
+    r * r + g * g + b * b
+}
+
+const THRESHOLD: i32 = 1000;
+
+pub fn stochastic_closest(pixel: Vector3<i32>) -> Vector3<i32> {
+    let mut palette = CGA_PALETTE.to_vec();
+    palette.sort_by_key(|cga| distance(pixel, *cga));
+    let mut filtered: Vec<Vector3<i32>> = palette.clone().into_iter().filter(|cga| distance(pixel, *cga) < THRESHOLD).collect();
+    let mut rng = rand::thread_rng();
+    filtered.shuffle(&mut rng);
+    if filtered.len() > 0 {
+        filtered[0]
+    } else {
+        palette[0]
+    }
 }

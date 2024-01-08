@@ -12,7 +12,7 @@ fn main() -> Result<(), core::convert::Infallible> {
     let size = abmp.header().image_size;
     let mut display = SimulatorDisplay::<Rgb888>::new(Size::new(size.width, size.height));
 
-    let iter = dither::dither(bmp.pixels().map(|c| c.1), size, dither::closest);
+    let iter = dither::dither(bmp.pixels().map(|c| c.1), size, dither::stochastic_closest);
     let pixels: Vec<u8> = iter.flat_map(|c| [c.r(), c.g(), c.b()]).collect();
     Image::new(&ImageRaw::<Rgb888>::new(&pixels, size.width), Point::zero()).draw(&mut display)?;
     Window::new("Hello World", &OutputSettingsBuilder::new().build()).show_static(&display);

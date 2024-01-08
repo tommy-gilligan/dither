@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 nalgebra = "*"
 embedded-graphics-core = "*"
+rand = "0.8.5"
 
 [dev-dependencies]
 embedded-graphics = "0.8.1"
