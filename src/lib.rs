@@ -34,14 +34,22 @@ where
     F: Fn(Rgb888) -> Rgb888,
     I: Iterator<Item = Rgb888>,
 {
-    let mut pixels_copy_a: Vec<Vector3<i32>> = pixels.map(color_to_vector).collect();
-    let mut pixels_copy: Vec<Vec<Vector3<i32>>> = pixels_copy_a.chunks(size.width.try_into().unwrap()).map(|a| a.to_vec()).collect();
-    let mut peekable = pixels_copy.iter_mut().peekable();
+    let pixels_copy_a: Vec<Vector3<i32>> = pixels.map(color_to_vector).collect();
+    let mut pixels_copy: Vec<Vec<Vector3<i32>>> = pixels_copy_a
+        .chunks(size.width.try_into().unwrap())
+        .map(|a| a.to_vec())
+        .collect();
+    let mut peekable = pixels_copy.iter_mut().enumerate().peekable();
 
-    while let Some(row) = peekable.next() {
-        let mut row_next = peekable.peek_mut();
+    while let Some((i, row)) = peekable.next() {
+        let row_next = peekable.peek_mut();
 
         for x in 0..(size.width as usize) {
+            let x = if i % 2 == 0 {
+                x
+            } else {
+                size.width as usize - 1 - x
+            };
             let oldpixel = row[x];
             let newpixel = color_to_vector(f(vector_to_colora(oldpixel)));
             row[x] = newpixel;
@@ -51,23 +59,24 @@ where
                 row[x + 1] += quant_error * 7 / 16
             }
             if (x as isize - 1) >= 0 {
-                if row_next.is_some() {
-                    row_next.as_mut().unwrap()[x - 1] += quant_error * 3 / 16
+                if let Some((_, row_next)) = row_next {
+                    row_next[x - 1] += quant_error * 3 / 16
                 }
             }
-            if row_next.is_some() {
-                row_next.as_mut().unwrap()[x] += quant_error * 5 / 16;
+            if let Some((_, row_next)) = row_next {
+                row_next[x] += quant_error * 5 / 16
             }
-
             if (x + 1) < (size.width as usize) {
-                if row_next.is_some() {
-                    row_next.as_mut().unwrap()[x + 1] += quant_error * 1 / 16
+                if let Some((_, row_next)) = row_next {
+                    row_next[x + 1] += quant_error * 1 / 16
                 }
             }
         }
     }
 
-    pixels_copy.into_iter().flat_map(|row| row.into_iter().map(vector_to_colora))
+    pixels_copy
+        .into_iter()
+        .flat_map(|row| row.into_iter().map(vector_to_colora))
 }
 
 #[test]
@@ -101,7 +110,7 @@ fn test_dither() {
     )
 }
 
-const CGA_PALETTE: [Rgb888; 13] = [
+const CGA_PALETTE: [Rgb888; 14] = [
     Rgb888::new(0x00, 0x00, 0x00),
     Rgb888::new(0x00, 0x00, 0xAA),
     Rgb888::new(0x00, 0xAA, 0x00),
@@ -110,11 +119,12 @@ const CGA_PALETTE: [Rgb888; 13] = [
     Rgb888::new(0xAA, 0x00, 0xAA),
     Rgb888::new(0xAA, 0xAA, 0xAA),
     Rgb888::new(0xAA, 0x55, 0x00),
+    Rgb888::new(0xff, 0xff, 0xff),
+    Rgb888::new(0x55, 0x55, 0x55),
+    Rgb888::new(0x55, 0x55, 0xFF),
     Rgb888::new(0xFF, 0xFF, 0x55),
     Rgb888::new(0xFF, 0x55, 0x55),
     Rgb888::new(0x55, 0xFF, 0x55),
-    Rgb888::new(0x55, 0x55, 0xFF),
-    Rgb888::new(0x55, 0x55, 0x55),
 ];
 
 pub fn closest(pixel: Rgb888) -> Rgb888 {
