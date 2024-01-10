@@ -1,13 +1,12 @@
 #![no_std]
 
-use core::ops::{Index, IndexMut};
 use embedded_graphics_core::{
     geometry::Size,
     pixelcolor::{Rgb888, RgbColor},
     prelude::*,
 };
-use heapless::Vec;
 use nalgebra::Vector3;
+mod wrapping_vec;
 
 pub fn color_to_vector<C>(color: C) -> Vector3<i32>
 where
@@ -30,7 +29,7 @@ where
     I: Iterator<Item = Rgb888>,
     F: Fn(Rgb888) -> Rgb888,
 {
-    buffer: WrappingVec,
+    buffer: wrapping_vec::WrappingVec,
     size: Size,
     source_pixels: I,
     f: F,
@@ -43,7 +42,7 @@ where
 {
     // should error
     pub fn new(size: Size, mut source_pixels: I, f: F) -> Self {
-        let v = WrappingVec::new(size, &mut source_pixels);
+        let v = wrapping_vec::WrappingVec::new(size, &mut source_pixels);
 
         Self {
             buffer: v,
@@ -51,46 +50,6 @@ where
             f,
             source_pixels,
         }
-    }
-}
-
-struct WrappingVec {
-    v: Vec<Vector3<i32>, 1024>,
-    cursor: usize,
-}
-
-impl WrappingVec {
-    fn new<I>(size: Size, source_pixels: &mut I) -> Self
-    where
-        I: Iterator<Item = Rgb888>,
-    {
-        let mut v = Vec::new();
-        for _ in 0..(size.width + 1) {
-            v.push(color_to_vector(source_pixels.next().unwrap()))
-                .unwrap();
-        }
-
-        Self { v, cursor: 0 }
-    }
-
-    fn push(&mut self, item: Vector3<i32>) {
-        self.v[self.cursor] = item;
-        self.cursor = (self.cursor + 1) % self.v.len();
-    }
-}
-
-impl Index<usize> for WrappingVec {
-    type Output = Vector3<i32>;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.v[(self.cursor + index) % self.v.len()]
-    }
-}
-
-impl IndexMut<usize> for WrappingVec {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        let len = self.v.len();
-        &mut self.v[(self.cursor + index) % len]
     }
 }
 
