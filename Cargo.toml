@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-nalgebra = "*"
+nalgebra = { version = "*", default-features = false }
 embedded-graphics-core = "*"
 
 [dev-dependencies]
