@@ -1,6 +1,6 @@
 # TODO
 
 - genericize
-- eliminate panics
-- eliminate heapless (is heapless missing a useful data structure?)
-- offer basic API (no embedded graphics) and embedded-graphics adapter
+- (is heapless missing a useful data structure? wrappingvec)
+- offer basic API in addtion to embedded graphics
+- use looser bound than From<Rgb888> for Display::Color

@@ -35,6 +35,22 @@ Display::Color: RgbColor + From<Rgb888>
     }
 }
 
+fn vector_from_rgb<C>(rgb: C) -> Vector3<i16> where C: RgbColor {
+    Vector3::<i16>::new(
+       rgb.r().into(),
+       rgb.g().into(),
+       rgb.b().into()
+    )
+}
+
+fn rgb_from_vector(vector: Vector3<i16>) -> Rgb888 {
+    Rgb888::new(
+        vector[0].clamp(0, 255).try_into().unwrap_or(0x00),
+        vector[1].clamp(0, 255).try_into().unwrap_or(0x00),
+        vector[2].clamp(0, 255).try_into().unwrap_or(0x00),
+    )
+}
+
 impl <'a, Display, ClosestColor, const WIDTH: usize, const WIDTH_PLUS_ONE: usize> DrawTarget for DitherTarget<'a, Display, ClosestColor, WIDTH, WIDTH_PLUS_ONE>
 where
 Display: DrawTarget + OriginDimensions,
@@ -42,46 +58,30 @@ ClosestColor: Fn(Display::Color) -> Display::Color,
 Display::Color: RgbColor + From<Rgb888>
 {
     type Color = Display::Color;
-    type Error = ();
+    type Error = Display::Error;
 
     fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
        where I: IntoIterator<Item = Pixel<Self::Color>>
    {
-         let mut vectors = pixels.into_iter().map(|pixel| {
-             let color = pixel.1;
-             Vector3::<i16>::new(
-                color.r().into(),
-                color.g().into(),
-                color.b().into()
-             )
-         });
+         let mut vectors = pixels.into_iter().map(|pixel| vector_from_rgb(pixel.1));
          let mut buffer: crate::wrapping_vec::WrappingVec<Vector3<i16>, WIDTH_PLUS_ONE> = crate::wrapping_vec::WrappingVec::new(&mut vectors);
 
-         let vx = vectors.map(|vector| {
-            let lookup: Self::Color = Rgb888::new(
-                buffer[0][0].clamp(0, 255).try_into().unwrap_or(0x00),
-                buffer[0][1].clamp(0, 255).try_into().unwrap_or(0x00),
-                buffer[0][2].clamp(0, 255).try_into().unwrap_or(0x00),
-            ).into();
-            let newpixel = (self.closest_color)(lookup);
-            let quant_error = buffer[0] - Vector3::<i16>::new(
-                newpixel.r().into(),
-                newpixel.g().into(),
-                newpixel.b().into()
-            );
-            buffer[1] += (quant_error * 7) / 16;
-            buffer[WIDTH - 1] += (quant_error * 3) / 16;
-            buffer[WIDTH] += (quant_error * 5) / 16;
-            buffer[WIDTH + 1] += quant_error / 16;
-            buffer.push(vector);
-            newpixel
-         });
-
-         let _ = self.display.fill_contiguous(
+         self.display.fill_contiguous(
              &Rectangle::new(Point::zero(), self.size()),
-             vx
-         );
-         Ok(())
+             vectors.map(|vector| {
+                let closest_color = (self.closest_color)(rgb_from_vector(buffer[0]).into());
+                let quant_error = buffer[0] - vector_from_rgb(closest_color);
+
+                buffer[1] += (quant_error * 7) / 16;
+                buffer[WIDTH - 1] += (quant_error * 3) / 16;
+                buffer[WIDTH] += (quant_error * 5) / 16;
+                buffer[WIDTH + 1] += quant_error / 16;
+
+                buffer.push(vector);
+
+                closest_color
+             })
+         )
    }
 }
 
