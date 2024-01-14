@@ -1,91 +1,63 @@
 #![no_std]
 
-use embedded_graphics_core::{
-    geometry::Size,
-    pixelcolor::{Rgb888, RgbColor},
-    prelude::*,
-};
+use embedded_graphics_core::pixelcolor::{Rgb888, RgbColor};
 use nalgebra::Vector3;
 mod wrapping_vec;
 
-pub fn color_to_vector<C>(color: C) -> Vector3<i32>
+pub struct Dither<I, F, const WIDTH: usize, const WIDTH_PLUS_ONE: usize>
 where
-    C: RgbColor,
-{
-    Vector3::<i32>::new(color.r() as i32, color.g() as i32, color.b() as i32)
-}
-
-// eliminate panic
-pub fn vector_to_color(color: Vector3<i32>) -> Rgb888 {
-    Rgb888::new(
-        color[0].clamp(0, 255).try_into().unwrap_or(0x00),
-        color[1].clamp(0, 255).try_into().unwrap_or(0x00),
-        color[2].clamp(0, 255).try_into().unwrap_or(0x00),
-    )
-}
-
-pub struct Dither<I, F>
-where
-    I: Iterator<Item = Rgb888>,
+    I: Iterator<Item = Vector3<i16>>,
     F: Fn(Rgb888) -> Rgb888,
 {
-    buffer: wrapping_vec::WrappingVec,
-    size: Size,
-    source_pixels: I,
-    f: F,
+    buffer: wrapping_vec::WrappingVec<Vector3<i16>, WIDTH_PLUS_ONE>,
+    vectors: I,
+    closest_color: F,
 }
 
-impl<I, F> Dither<I, F>
+impl<I, F, const WIDTH: usize, const WIDTH_PLUS_ONE: usize> Dither<I, F, WIDTH, WIDTH_PLUS_ONE>
 where
-    I: Iterator<Item = Rgb888>,
+    I: Iterator<Item = Vector3<i16>>,
     F: Fn(Rgb888) -> Rgb888,
 {
-    // should error
-    pub fn new(size: Size, mut source_pixels: I, f: F) -> Self {
-        let v = wrapping_vec::WrappingVec::new(size, &mut source_pixels);
-
+    pub fn new(mut vectors: I, closest_color: F) -> Self {
         Self {
-            buffer: v,
-            size,
-            f,
-            source_pixels,
+            buffer: wrapping_vec::WrappingVec::new(&mut vectors),
+            closest_color,
+            vectors,
         }
     }
 }
 
-impl<I, F> Iterator for Dither<I, F>
+impl<I, F, const WIDTH: usize, const WIDTH_PLUS_ONE: usize> Iterator for Dither<I, F, WIDTH, WIDTH_PLUS_ONE>
 where
-    I: Iterator<Item = Rgb888>,
+    I: Iterator<Item = Vector3<i16>>,
     F: Fn(Rgb888) -> Rgb888,
 {
     type Item = Rgb888;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(next_pixel) = self.source_pixels.next() {
-            let oldpixel = self.buffer[0];
-            let newpixel = (self.f)(vector_to_color(oldpixel));
-            let quant_error = oldpixel - color_to_vector(newpixel);
+        if let Some(next_pixel) = self.vectors.next() {
+            let lookup = Rgb888::new(
+                self.buffer[0][0].clamp(0, 255).try_into().unwrap_or(0x00),
+                self.buffer[0][1].clamp(0, 255).try_into().unwrap_or(0x00),
+                self.buffer[0][2].clamp(0, 255).try_into().unwrap_or(0x00),
+            );
+            let newpixel = (self.closest_color)(lookup);
+            let quant_error = self.buffer[0] - Vector3::<i16>::new(
+                newpixel.r().into(),
+                newpixel.g().into(),
+                newpixel.b().into()
+            );
 
             self.buffer[1] += (quant_error * 7) / 16;
-            self.buffer[self.size.width as usize - 1] += (quant_error * 3) / 16;
-            self.buffer[self.size.width as usize] += (quant_error * 5) / 16;
-            self.buffer[self.size.width as usize + 1] += quant_error / 16;
+            self.buffer[WIDTH - 1] += (quant_error * 3) / 16;
+            self.buffer[WIDTH] += (quant_error * 5) / 16;
+            self.buffer[WIDTH + 1] += quant_error / 16;
 
-            self.buffer.push(color_to_vector(next_pixel));
-
+            self.buffer.push(next_pixel);
             Some(newpixel)
         } else {
             None
         }
-    }
-}
-
-impl<I, F> OriginDimensions for Dither<I, F>
-where
-    I: Iterator<Item = Rgb888>,
-    F: Fn(Rgb888) -> Rgb888,
-{
-    fn size(&self) -> Size {
-        self.size
     }
 }

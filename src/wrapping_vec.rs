@@ -1,43 +1,37 @@
 use core::ops::{Index, IndexMut};
-use nalgebra::Vector3;
-use embedded_graphics_core::pixelcolor::Rgb888;
-use embedded_graphics_core::prelude::*;
-use crate::color_to_vector;
 
-pub struct WrappingVec {
-    v: [Vector3<i32>; 1024],
+pub struct WrappingVec<X, const N: usize> where X: Default + Copy {
+    v: [X; N],
     cursor: usize,
-    size: usize,
 }
 
-impl WrappingVec {
-    pub fn new<I>(size: Size, source_pixels: &mut I) -> Self where I: Iterator<Item = Rgb888> {
-        let mut v = [Vector3::<i32>::default(); 1024];
-        let size: usize = size.width as usize + 1;
+impl <X, const N: usize>WrappingVec<X, N> where X: Default + Copy {
+    pub fn new<I>(source_pixels: &mut I) -> Self where I: Iterator<Item = X> {
+        let mut v = [Default::default(); N];
 
-        for item in v.iter_mut().take(size) {
-            *item = color_to_vector(source_pixels.next().unwrap());
+        for item in v.iter_mut().take(N) {
+            *item = source_pixels.next().unwrap();
         }
 
-        Self { v, cursor: 0, size }
+        Self { v, cursor: 0 }
     }
 
-    pub fn push(&mut self, item: Vector3<i32>) {
+    pub fn push(&mut self, item: X) {
         self.v[self.cursor] = item;
-        self.cursor = (self.cursor + 1) % self.size;
+        self.cursor = (self.cursor + 1) % N;
     }
 }
 
-impl Index<usize> for WrappingVec {
-    type Output = Vector3<i32>;
+impl <X, const N: usize>Index<usize> for WrappingVec<X, N> where X: Default + Copy {
+    type Output = X;
 
     fn index(&self, index: usize) -> &Self::Output {
-        &self.v[(self.cursor + index) % self.size]
+        &self.v[(self.cursor + index) % N]
     }
 }
 
-impl IndexMut<usize> for WrappingVec {
+impl <X, const N: usize>IndexMut<usize> for WrappingVec<X, N> where X: Default + Copy {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.v[(self.cursor + index) % self.size]
+        &mut self.v[(self.cursor + index) % N]
     }
 }
