@@ -1,5 +1,4 @@
 use embedded_graphics::{
-    primitives::Rectangle,
     pixelcolor::Rgb888,
     prelude::*,
 };
@@ -9,33 +8,20 @@ use embedded_graphics_simulator::{
     Window,
 };
 use tinybmp::Bmp;
-use nalgebra::Vector3;
+use dither::DitherTarget;
 
-use dither::Dither;
+const WIDTH: usize = 256;
+const HEIGHT: usize = 383;
 
 fn main() -> Result<(), core::convert::Infallible> {
     let bmp: Bmp<Rgb888> = Bmp::from_slice(include_bytes!("./mona_lisa.bmp")).unwrap();
-    let mut display = SimulatorDisplay::<Rgb888>::new(bmp.size());
+    let size = Size::new(WIDTH as u32, HEIGHT as u32);
 
-    display
-        .fill_contiguous(
-            &Rectangle::new(Point::zero(), bmp.size()),
-            Dither::<_, _, 256, 257>::new(
-                bmp.pixels().map(|c| {
-                    let color = c.1;
-                    Vector3::<i16>::new(
-                        color.r().into(),
-                        color.g().into(),
-                        color.b().into()
-                    )
-                }),
-                closest
-            )
-        )
-        .unwrap();
+    let mut simulator_display = SimulatorDisplay::<Rgb888>::new(size);
+    let mut display: DitherTarget<'_, _, _, 256, 257> = DitherTarget::new(&mut simulator_display, closest);
+    bmp.draw(&mut display).unwrap();
 
-    Window::new("Mona Lisa", &OutputSettingsBuilder::new().build()).show_static(&display);
-
+    Window::new("Mona Lisa", &OutputSettingsBuilder::new().build()).show_static(&simulator_display);
     Ok(())
 }
 

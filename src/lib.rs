@@ -1,63 +1,97 @@
 #![no_std]
 
-use embedded_graphics_core::pixelcolor::{Rgb888, RgbColor};
+use embedded_graphics_core::{
+    Pixel,
+    pixelcolor::{Rgb888, RgbColor},
+    primitives::Rectangle,
+    draw_target::DrawTarget,
+    geometry::{Point, OriginDimensions, Size},
+};
+
 use nalgebra::Vector3;
 mod wrapping_vec;
 
-pub struct Dither<I, F, const WIDTH: usize, const WIDTH_PLUS_ONE: usize>
+pub struct DitherTarget<'a, Display, ClosestColor, const WIDTH: usize, const WIDTH_PLUS_ONE: usize>
 where
-    I: Iterator<Item = Vector3<i16>>,
-    F: Fn(Rgb888) -> Rgb888,
+Display: DrawTarget + OriginDimensions,
+ClosestColor: Fn(Display::Color) -> Display::Color,
+Display::Color: RgbColor + From<Rgb888>
 {
-    buffer: wrapping_vec::WrappingVec<Vector3<i16>, WIDTH_PLUS_ONE>,
-    vectors: I,
-    closest_color: F,
+    display: &'a mut Display,
+    closest_color: ClosestColor,
 }
 
-impl<I, F, const WIDTH: usize, const WIDTH_PLUS_ONE: usize> Dither<I, F, WIDTH, WIDTH_PLUS_ONE>
+impl <'a, Display, ClosestColor, const WIDTH: usize, const WIDTH_PLUS_ONE: usize> DitherTarget<'a, Display, ClosestColor, WIDTH, WIDTH_PLUS_ONE>
 where
-    I: Iterator<Item = Vector3<i16>>,
-    F: Fn(Rgb888) -> Rgb888,
+Display: DrawTarget + OriginDimensions,
+ClosestColor: Fn(Display::Color) -> Display::Color,
+Display::Color: RgbColor + From<Rgb888>
 {
-    pub fn new(mut vectors: I, closest_color: F) -> Self {
+    pub fn new(display: &'a mut Display, closest_color: ClosestColor) -> Self {
         Self {
-            buffer: wrapping_vec::WrappingVec::new(&mut vectors),
+            display,
             closest_color,
-            vectors,
         }
     }
 }
 
-impl<I, F, const WIDTH: usize, const WIDTH_PLUS_ONE: usize> Iterator for Dither<I, F, WIDTH, WIDTH_PLUS_ONE>
+impl <'a, Display, ClosestColor, const WIDTH: usize, const WIDTH_PLUS_ONE: usize> DrawTarget for DitherTarget<'a, Display, ClosestColor, WIDTH, WIDTH_PLUS_ONE>
 where
-    I: Iterator<Item = Vector3<i16>>,
-    F: Fn(Rgb888) -> Rgb888,
+Display: DrawTarget + OriginDimensions,
+ClosestColor: Fn(Display::Color) -> Display::Color,
+Display::Color: RgbColor + From<Rgb888>
 {
-    type Item = Rgb888;
+    type Color = Display::Color;
+    type Error = ();
 
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(next_pixel) = self.vectors.next() {
-            let lookup = Rgb888::new(
-                self.buffer[0][0].clamp(0, 255).try_into().unwrap_or(0x00),
-                self.buffer[0][1].clamp(0, 255).try_into().unwrap_or(0x00),
-                self.buffer[0][2].clamp(0, 255).try_into().unwrap_or(0x00),
-            );
+    fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
+       where I: IntoIterator<Item = Pixel<Self::Color>>
+   {
+         let mut vectors = pixels.into_iter().map(|pixel| {
+             let color = pixel.1;
+             Vector3::<i16>::new(
+                color.r().into(),
+                color.g().into(),
+                color.b().into()
+             )
+         });
+         let mut buffer: crate::wrapping_vec::WrappingVec<Vector3<i16>, WIDTH_PLUS_ONE> = crate::wrapping_vec::WrappingVec::new(&mut vectors);
+
+         let vx = vectors.map(|vector| {
+            let lookup: Self::Color = Rgb888::new(
+                buffer[0][0].clamp(0, 255).try_into().unwrap_or(0x00),
+                buffer[0][1].clamp(0, 255).try_into().unwrap_or(0x00),
+                buffer[0][2].clamp(0, 255).try_into().unwrap_or(0x00),
+            ).into();
             let newpixel = (self.closest_color)(lookup);
-            let quant_error = self.buffer[0] - Vector3::<i16>::new(
+            let quant_error = buffer[0] - Vector3::<i16>::new(
                 newpixel.r().into(),
                 newpixel.g().into(),
                 newpixel.b().into()
             );
+            buffer[1] += (quant_error * 7) / 16;
+            buffer[WIDTH - 1] += (quant_error * 3) / 16;
+            buffer[WIDTH] += (quant_error * 5) / 16;
+            buffer[WIDTH + 1] += quant_error / 16;
+            buffer.push(vector);
+            newpixel
+         });
 
-            self.buffer[1] += (quant_error * 7) / 16;
-            self.buffer[WIDTH - 1] += (quant_error * 3) / 16;
-            self.buffer[WIDTH] += (quant_error * 5) / 16;
-            self.buffer[WIDTH + 1] += quant_error / 16;
+         let _ = self.display.fill_contiguous(
+             &Rectangle::new(Point::zero(), self.size()),
+             vx
+         );
+         Ok(())
+   }
+}
 
-            self.buffer.push(next_pixel);
-            Some(newpixel)
-        } else {
-            None
-        }
+impl <'a, Display, ClosestColor, const WIDTH: usize, const WIDTH_PLUS_ONE: usize> OriginDimensions for DitherTarget<'a, Display, ClosestColor, WIDTH, WIDTH_PLUS_ONE>
+where
+Display: DrawTarget + OriginDimensions,
+ClosestColor: Fn(Display::Color) -> Display::Color,
+Display::Color: RgbColor + From<Rgb888>
+{
+    fn size(&self) -> Size {
+        self.display.size()
     }
 }
