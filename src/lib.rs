@@ -68,8 +68,8 @@ Rgb888: From<<Display as DrawTarget>::Color>
          self.display.fill_contiguous(
              &Rectangle::new(Point::zero(), self.size()),
              vectors.map(|vector| {
-                let closest_color: Rgb888 = rgb_from_vector(buffer[0]).into();
-                let quant_error = buffer[0] - vector_from_rgb(closest_color);
+                let closest_color: Display::Color = rgb_from_vector(buffer[0]).into();
+                let quant_error = buffer[0] - vector_from_rgb(closest_color.into());
 
                 buffer[1] += (quant_error * 7) / 16;
                 buffer[WIDTH - 1] += (quant_error * 3) / 16;
