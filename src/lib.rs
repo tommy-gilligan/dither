@@ -14,7 +14,7 @@ mod wrapping_vec;
 pub struct DitherTarget<'a, Display, ClosestColor, const WIDTH: usize, const WIDTH_PLUS_ONE: usize>
 where
 Display: DrawTarget + OriginDimensions,
-ClosestColor: Fn(Display::Color) -> Display::Color,
+ClosestColor: Fn(Rgb888) -> Display::Color,
 Display::Color: RgbColor + From<Rgb888>
 {
     display: &'a mut Display,
@@ -24,7 +24,7 @@ Display::Color: RgbColor + From<Rgb888>
 impl <'a, Display, ClosestColor, const WIDTH: usize, const WIDTH_PLUS_ONE: usize> DitherTarget<'a, Display, ClosestColor, WIDTH, WIDTH_PLUS_ONE>
 where
 Display: DrawTarget + OriginDimensions,
-ClosestColor: Fn(Display::Color) -> Display::Color,
+ClosestColor: Fn(Rgb888) -> Display::Color,
 Display::Color: RgbColor + From<Rgb888>
 {
     pub fn new(display: &'a mut Display, closest_color: ClosestColor) -> Self {
@@ -54,10 +54,10 @@ fn rgb_from_vector(vector: Vector3<i16>) -> Rgb888 {
 impl <'a, Display, ClosestColor, const WIDTH: usize, const WIDTH_PLUS_ONE: usize> DrawTarget for DitherTarget<'a, Display, ClosestColor, WIDTH, WIDTH_PLUS_ONE>
 where
 Display: DrawTarget + OriginDimensions,
-ClosestColor: Fn(Display::Color) -> Display::Color,
+ClosestColor: Fn(Rgb888) -> Display::Color,
 Display::Color: RgbColor + From<Rgb888>
 {
-    type Color = Display::Color;
+    type Color = Rgb888;
     type Error = Display::Error;
 
     fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
@@ -88,7 +88,7 @@ Display::Color: RgbColor + From<Rgb888>
 impl <'a, Display, ClosestColor, const WIDTH: usize, const WIDTH_PLUS_ONE: usize> OriginDimensions for DitherTarget<'a, Display, ClosestColor, WIDTH, WIDTH_PLUS_ONE>
 where
 Display: DrawTarget + OriginDimensions,
-ClosestColor: Fn(Display::Color) -> Display::Color,
+ClosestColor: Fn(Rgb888) -> Display::Color,
 Display::Color: RgbColor + From<Rgb888>
 {
     fn size(&self) -> Size {
