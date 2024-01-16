@@ -6,6 +6,8 @@ edition = "2021"
 [dependencies]
 nalgebra = { version = "*", default-features = false }
 embedded-graphics-core = "*"
+image = "0.24.8"
+viuer = "0.7.1"
 
 [dev-dependencies]
 embedded-graphics = "0.8.1"

@@ -1,58 +1,31 @@
-use embedded_graphics::{
-    pixelcolor::Rgb888,
-    prelude::*,
-};
-use embedded_graphics_simulator::{
-    OutputSettingsBuilder,
-    SimulatorDisplay,
-    Window,
-};
 use embedded_graphics_core::{
+    pixelcolor::{Rgb888, raw::RawU32},
     draw_target::DrawTarget,
     geometry::OriginDimensions,
-    pixelcolor::{PixelColor, raw::RawU32}
+    prelude::*,
 };
-use tinybmp::Bmp;
-use dither::DitherTarget;
 
-const WIDTH: usize = 256;
-const HEIGHT: usize = 383;
-
-fn main() -> Result<(), core::convert::Infallible> {
-    let bmp: Bmp<Rgb888> = Bmp::from_slice(include_bytes!("./mona_lisa.bmp")).unwrap();
-    let size = Size::new(WIDTH as u32, HEIGHT as u32);
-
-    let mut simulator_display = SimulatorDisplay::<Rgb888>::new(size);
-    let mut cga: FakeCGA = FakeCGA::new(&mut simulator_display);
-    let mut display: DitherTarget<'_, _, 256, 257> = DitherTarget::new(&mut cga);
-    bmp.draw(&mut display).unwrap();
-
-    Window::new(
-        "Mona Lisa",
-        &OutputSettingsBuilder::new().build()
-    ).show_static(&simulator_display);
-    Ok(())
+pub struct FakeCGA<'a, Display> where Display: DrawTarget<Color = Rgb888> + OriginDimensions {
+    display: &'a mut Display
 }
 
-struct FakeCGA<'a> {
-    display: &'a mut SimulatorDisplay::<Rgb888>
-}
-
-impl <'a>FakeCGA<'a> {
-    fn new(display: &'a mut SimulatorDisplay::<Rgb888>) -> Self {
+impl <'a, Display>FakeCGA<'a, Display> where Display: DrawTarget<Color = Rgb888> + OriginDimensions {
+    pub fn new(display: &'a mut Display) -> Self {
         Self { display }
     }
 }
 
-impl <'a>OriginDimensions for FakeCGA<'a> {
+impl <'a, Display>OriginDimensions for FakeCGA<'a, Display> where Display: DrawTarget<Color = Rgb888> + OriginDimensions {
     fn size(&self) -> Size {
         self.display.size()
     }
 }
 
-impl <'a>DrawTarget for FakeCGA<'a> {
+ 
+impl <'a, Display>DrawTarget for FakeCGA<'a, Display> where Display: DrawTarget<Color = Rgb888> + OriginDimensions {
     type Color = CGAColor;
-    type Error = <SimulatorDisplay::<Rgb888> as DrawTarget>::Error;
+    type Error = <Display as DrawTarget>::Error;
+// <Display as DrawTarget>::Color: From<CGAColor>
 
     fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
        where I: IntoIterator<Item = Pixel<Self::Color>> {
@@ -63,7 +36,7 @@ impl <'a>DrawTarget for FakeCGA<'a> {
 }
 
 #[derive(Copy, Clone, PartialEq)]
-enum CGAColor {
+pub enum CGAColor {
     Black,
     DarkGray,
     Blue,

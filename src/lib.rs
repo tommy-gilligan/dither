@@ -10,6 +10,8 @@ use embedded_graphics_core::{
 
 use nalgebra::Vector3;
 mod wrapping_vec;
+pub mod cga;
+pub mod terminal;
 
 pub struct DitherTarget<'a, Display, const WIDTH: usize, const WIDTH_PLUS_ONE: usize>
 where
