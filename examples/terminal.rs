@@ -14,7 +14,7 @@ fn main() -> Result<(), core::convert::Infallible> {
 
     let mut simulator_display = SimulatorDisplay::new(size);
     let mut cga: cga::FakeCGA<SimulatorDisplay> = cga::FakeCGA::new(&mut simulator_display);
-    let mut display: DitherTarget<'_, _, 256, 257> = DitherTarget::new(&mut cga);
+    let mut display: DitherTarget<'_, _, { WIDTH + 1 }> = DitherTarget::new(&mut cga);
     bmp.draw(&mut display).unwrap();
 
     Ok(())

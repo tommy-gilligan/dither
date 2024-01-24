@@ -10,12 +10,12 @@ use embedded_graphics_core::{
 
 use nalgebra::Vector3;
 mod wrapping_vec;
-#[cfg(std)]
+#[cfg(feature="cga")]
 pub mod cga;
-#[cfg(std)]
+#[cfg(feature="terminal")]
 pub mod terminal;
 
-pub struct DitherTarget<'a, Display, const WIDTH: usize, const WIDTH_PLUS_ONE: usize>
+pub struct DitherTarget<'a, Display, const WIDTH_PLUS_ONE: usize>
 where
 Display: DrawTarget + OriginDimensions,
 Display::Color: From<Rgb888>,
@@ -25,7 +25,7 @@ Rgb888: From<<Display as DrawTarget>::Color>
 }
 
 
-impl <'a, Display, const WIDTH: usize, const WIDTH_PLUS_ONE: usize> DitherTarget<'a, Display, WIDTH, WIDTH_PLUS_ONE>
+impl <'a, Display, const WIDTH_PLUS_ONE: usize> DitherTarget<'a, Display, WIDTH_PLUS_ONE>
 where
 Display: DrawTarget + OriginDimensions,
 Display::Color: From<Rgb888>,
@@ -54,7 +54,7 @@ fn rgb_from_vector(vector: Vector3<i16>) -> Rgb888 {
     )
 }
 
-impl <'a, Display, const WIDTH: usize, const WIDTH_PLUS_ONE: usize> DrawTarget for DitherTarget<'a, Display, WIDTH, WIDTH_PLUS_ONE>
+impl <'a, Display, const WIDTH_PLUS_ONE: usize> DrawTarget for DitherTarget<'a, Display, WIDTH_PLUS_ONE>
 where
 Display: DrawTarget + OriginDimensions,
 Display::Color: From<Rgb888>,
@@ -76,9 +76,9 @@ Rgb888: From<<Display as DrawTarget>::Color>
                 let quant_error = buffer[0] - vector_from_rgb(closest_color.into());
 
                 buffer[1] += (quant_error * 7) / 16;
-                buffer[WIDTH - 1] += (quant_error * 3) / 16;
-                buffer[WIDTH] += (quant_error * 5) / 16;
-                buffer[WIDTH + 1] += quant_error / 16;
+                buffer[WIDTH_PLUS_ONE - 2] += (quant_error * 3) / 16;
+                buffer[WIDTH_PLUS_ONE - 1] += (quant_error * 5) / 16;
+                buffer[WIDTH_PLUS_ONE] += quant_error / 16;
 
                 buffer.push(vector);
 
@@ -88,7 +88,7 @@ Rgb888: From<<Display as DrawTarget>::Color>
    }
 }
 
-impl <'a, Display, const WIDTH: usize, const WIDTH_PLUS_ONE: usize> OriginDimensions for DitherTarget<'a, Display, WIDTH, WIDTH_PLUS_ONE>
+impl <'a, Display, const WIDTH_PLUS_ONE: usize> OriginDimensions for DitherTarget<'a, Display, WIDTH_PLUS_ONE>
 where
 Display: DrawTarget + OriginDimensions,
 Display::Color: From<Rgb888>,
