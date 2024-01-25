@@ -20,12 +20,10 @@ impl <'a, Display>OriginDimensions for FakeCGA<'a, Display> where Display: DrawT
         self.display.size()
     }
 }
-
  
 impl <'a, Display>DrawTarget for FakeCGA<'a, Display> where Display: DrawTarget<Color = Rgb888> + OriginDimensions {
     type Color = CGAColor;
     type Error = <Display as DrawTarget>::Error;
-// <Display as DrawTarget>::Color: From<CGAColor>
 
     fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
        where I: IntoIterator<Item = Pixel<Self::Color>> {
@@ -74,12 +72,10 @@ const RGB_DISPLAY_PAIRS: [(CGAColor, Rgb888); 16] = [
     (CGAColor::White,        Rgb888::new(0xff, 0xff, 0xff)),
 ];
 
-fn rgb_distance(a: Rgb888, c: Rgb888) -> u32 {
-    let r: i32 = (a.r() as i32) - (c.r() as i32);
-    let g: i32 = (a.g() as i32) - (c.g() as i32);
-    let b: i32 = (a.b() as i32) - (c.b() as i32);
-
-    ((r * r + g * g + b * b) as f64).sqrt() as u32
+fn rgb_distance<C, D>(a: C, c: D) -> u16 where C: embedded_graphics_core::pixelcolor::RgbColor, D: embedded_graphics_core::pixelcolor::RgbColor {
+    (a.r() as u16).abs_diff(c.r() as u16) +
+    (a.g() as u16).abs_diff(c.g() as u16) +
+    (a.b() as u16).abs_diff(c.b() as u16)
 }
 
 impl From<CGAColor> for Rgb888 {
