@@ -9,32 +9,31 @@ use embedded_graphics_core::{
 };
 
 use nalgebra::Vector3;
+
 mod wrapping_vec;
 #[cfg(feature="cga")]
 pub mod cga;
 #[cfg(feature="terminal")]
 pub mod terminal;
 
-pub struct DitherTarget<'a, Display, const WIDTH_PLUS_ONE: usize>
-where
+pub struct DitherTarget<'a, Display, F, const WIDTH_PLUS_ONE: usize>
+where F: Fn(Rgb888) -> Display::Color,
 Display: DrawTarget + OriginDimensions,
-Display::Color: From<Rgb888>,
 Rgb888: From<<Display as DrawTarget>::Color>
 {
     display: &'a mut Display,
+    closest_color_fn: F
 }
 
-
-impl <'a, Display, const WIDTH_PLUS_ONE: usize> DitherTarget<'a, Display, WIDTH_PLUS_ONE>
-where
+impl <'a, Display, F, const WIDTH_PLUS_ONE: usize> DitherTarget<'a, Display, F, WIDTH_PLUS_ONE> where F: Fn(Rgb888) -> Display::Color,
 Display: DrawTarget + OriginDimensions,
-Display::Color: From<Rgb888>,
 Rgb888: From<<Display as DrawTarget>::Color>
 {
-    pub fn new(display: &'a mut Display) -> Self {
-        Self {
-            display,
-        }
+    pub fn new(
+        display: &'a mut Display,
+        closest_color_fn: F
+    ) -> Self {
+        Self { display, closest_color_fn }
     }
 }
 
@@ -54,10 +53,9 @@ fn rgb_from_vector(vector: Vector3<i16>) -> Rgb888 {
     )
 }
 
-impl <'a, Display, const WIDTH_PLUS_ONE: usize> DrawTarget for DitherTarget<'a, Display, WIDTH_PLUS_ONE>
-where
+impl <'a, Display, F, const WIDTH_PLUS_ONE: usize> DrawTarget for DitherTarget<'a, Display, F, WIDTH_PLUS_ONE>
+where F: Fn(Rgb888) -> Display::Color,
 Display: DrawTarget + OriginDimensions,
-Display::Color: From<Rgb888>,
 Rgb888: From<<Display as DrawTarget>::Color>
 {
     type Color = Rgb888;
@@ -72,8 +70,9 @@ Rgb888: From<<Display as DrawTarget>::Color>
          self.display.fill_contiguous(
              &Rectangle::new(Point::zero(), self.size()),
              vectors.map(|vector| {
-                let closest_color: Display::Color = rgb_from_vector(buffer[0]).into();
-                let quant_error = buffer[0] - vector_from_rgb::<Rgb888>(closest_color.into());
+                let closest_color: Display::Color = (self.closest_color_fn)(rgb_from_vector(buffer[0]));
+                let closest_color_rgb: Rgb888 = closest_color.into();
+                let quant_error: Vector3<i16> = buffer[0] - vector_from_rgb(closest_color_rgb);
 
                 buffer[1] += (quant_error * 7) / 16;
                 buffer[WIDTH_PLUS_ONE - 2] += (quant_error * 3) / 16;
@@ -82,16 +81,15 @@ Rgb888: From<<Display as DrawTarget>::Color>
 
                 buffer.push(vector);
 
-                closest_color.into()
+                closest_color
              })
          )
    }
 }
 
-impl <'a, Display, const WIDTH_PLUS_ONE: usize> OriginDimensions for DitherTarget<'a, Display, WIDTH_PLUS_ONE>
-where
+impl <'a, Display, F, const WIDTH_PLUS_ONE: usize> OriginDimensions for DitherTarget<'a, Display, F, WIDTH_PLUS_ONE>
+where F: Fn(Rgb888) -> Display::Color,
 Display: DrawTarget + OriginDimensions,
-Display::Color: From<Rgb888>,
 Rgb888: From<<Display as DrawTarget>::Color>
 {
     fn size(&self) -> Size {

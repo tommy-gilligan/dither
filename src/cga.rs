@@ -53,7 +53,7 @@ pub enum CGAColor {
     White
 }
 
-const RGB_DISPLAY_PAIRS: [(CGAColor, Rgb888); 16] = [
+pub const RGB_DISPLAY_PAIRS: [(CGAColor, Rgb888); 16] = [
     (CGAColor::Black,        Rgb888::new(0x00, 0x00, 0x00)),
     (CGAColor::DarkGray,     Rgb888::new(0x55, 0x55, 0x55)),
     (CGAColor::Blue,         Rgb888::new(0x00, 0x00, 0xaa)),
@@ -72,25 +72,9 @@ const RGB_DISPLAY_PAIRS: [(CGAColor, Rgb888); 16] = [
     (CGAColor::White,        Rgb888::new(0xff, 0xff, 0xff)),
 ];
 
-fn rgb_distance<C, D>(a: C, c: D) -> u16 where C: embedded_graphics_core::pixelcolor::RgbColor, D: embedded_graphics_core::pixelcolor::RgbColor {
-    (a.r() as u16).abs_diff(c.r() as u16) +
-    (a.g() as u16).abs_diff(c.g() as u16) +
-    (a.b() as u16).abs_diff(c.b() as u16)
-}
-
 impl From<CGAColor> for Rgb888 {
     fn from(value: CGAColor) -> Self {
         RGB_DISPLAY_PAIRS.iter().find(|(cga, _)| *cga == value).unwrap().1
-    }
-}
-
-impl From<Rgb888> for CGAColor {
-    fn from(value: Rgb888) -> Self {
-       RGB_DISPLAY_PAIRS
-           .iter()
-           .min_by_key(|(_, rgb)| rgb_distance(value, *rgb))
-           .unwrap()
-           .0
     }
 }
 
