@@ -5,34 +5,42 @@ use embedded_graphics_core::{
     prelude::*,
 };
 
-pub struct FakeCGA<'a, Display>
+pub struct FakeCGA<'a, Display, F>
 where
     Display: DrawTarget<Color = Rgb888> + OriginDimensions,
+    F: Fn(CGAColor) -> Rgb888,
 {
     display: &'a mut Display,
+    color_conversion_fn: &'a F,
 }
 
-impl<'a, Display> FakeCGA<'a, Display>
+impl<'a, Display, F> FakeCGA<'a, Display, F>
 where
     Display: DrawTarget<Color = Rgb888> + OriginDimensions,
+    F: Fn(CGAColor) -> Rgb888,
 {
-    pub fn new(display: &'a mut Display) -> Self {
-        Self { display }
+    pub fn new(display: &'a mut Display, color_conversion_fn: &'a F) -> Self {
+        Self {
+            display,
+            color_conversion_fn,
+        }
     }
 }
 
-impl<'a, Display> OriginDimensions for FakeCGA<'a, Display>
+impl<'a, Display, F> OriginDimensions for FakeCGA<'a, Display, F>
 where
     Display: DrawTarget<Color = Rgb888> + OriginDimensions,
+    F: Fn(CGAColor) -> Rgb888,
 {
     fn size(&self) -> Size {
         self.display.size()
     }
 }
 
-impl<'a, Display> DrawTarget for FakeCGA<'a, Display>
+impl<'a, Display, F> DrawTarget for FakeCGA<'a, Display, F>
 where
     Display: DrawTarget<Color = Rgb888> + OriginDimensions,
+    F: Fn(CGAColor) -> Rgb888,
 {
     type Color = CGAColor;
     type Error = <Display as DrawTarget>::Error;
@@ -44,7 +52,7 @@ where
         self.display.draw_iter(
             pixels
                 .into_iter()
-                .map(|pixel| Pixel(pixel.0, pixel.1.into())),
+                .map(|pixel| Pixel(pixel.0, (self.color_conversion_fn)(pixel.1))),
         )
     }
 }
@@ -87,16 +95,6 @@ pub const RGB_DISPLAY_PAIRS: [(CGAColor, Rgb888); 16] = [
     (CGAColor::LightGray, Rgb888::new(0xaa, 0xaa, 0xaa)),
     (CGAColor::White, Rgb888::new(0xff, 0xff, 0xff)),
 ];
-
-impl From<CGAColor> for Rgb888 {
-    fn from(value: CGAColor) -> Self {
-        RGB_DISPLAY_PAIRS
-            .iter()
-            .find(|(cga, _)| *cga == value)
-            .unwrap()
-            .1
-    }
-}
 
 impl PixelColor for CGAColor {
     type Raw = RawU32;

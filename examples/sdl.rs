@@ -16,20 +16,36 @@ where
         + (a.b() as u16).abs_diff(c.b() as u16)
 }
 
+fn rgb_to_cga(x: Rgb888) -> cga::CGAColor {
+    cga::RGB_DISPLAY_PAIRS
+        .iter()
+        .min_by_key(|(_, rgb)| rgb_distance(x, *rgb))
+        .unwrap()
+        .0
+}
+
+fn cga_to_rgb(x: cga::CGAColor) -> Rgb888 {
+    cga::RGB_DISPLAY_PAIRS
+        .iter()
+        .find(|(cga, _)| *cga == x)
+        .unwrap()
+        .1
+}
+
 fn main() -> Result<(), core::convert::Infallible> {
     let bmp: Bmp<Rgb888> = Bmp::from_slice(include_bytes!("./mona_lisa.bmp")).unwrap();
     let size = Size::new(WIDTH as u32, HEIGHT as u32);
 
     let mut simulator_display = SimulatorDisplay::<Rgb888>::new(size);
-    let mut cga: cga::FakeCGA<SimulatorDisplay<Rgb888>> = cga::FakeCGA::new(&mut simulator_display);
-    let mut display: DitherTarget<'_, cga::FakeCGA<SimulatorDisplay<Rgb888>>, _, { WIDTH + 1 }> =
-        DitherTarget::new(&mut cga, |x| {
-            cga::RGB_DISPLAY_PAIRS
-                .iter()
-                .min_by_key(|(_, rgb)| rgb_distance(x, *rgb))
-                .unwrap()
-                .0
-        });
+    let mut cga: cga::FakeCGA<SimulatorDisplay<Rgb888>, _> =
+        cga::FakeCGA::new(&mut simulator_display, &cga_to_rgb);
+    let mut display: DitherTarget<
+        '_,
+        cga::FakeCGA<SimulatorDisplay<Rgb888>, _>,
+        _,
+        _,
+        { WIDTH + 1 },
+    > = DitherTarget::new(&mut cga, &rgb_to_cga, &cga_to_rgb);
     bmp.draw(&mut display).unwrap();
 
     Window::new("Mona Lisa", &OutputSettingsBuilder::new().build()).show_static(&simulator_display);

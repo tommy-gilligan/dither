@@ -17,3 +17,11 @@ tinybmp = "0.5.0"
 [features]
 terminal = ["dep:viuer", "dep:image"]
 cga = []
+
+[[example]]
+name = "terminal"
+required-features = ["cga", "terminal"]
+
+[[example]]
+name = "sdl"
+required-features = ["cga"]
