@@ -89,6 +89,8 @@ where
                 let closest_color_rgb: Rgb888 = (self.inverse_closest_color_fn)(closest_color);
                 let quant_error: Vector3<i16> = buffer[0] - vector_from_rgb(closest_color_rgb);
 
+                assert!((self.closest_color_fn)(closest_color_rgb) == closest_color);
+
                 buffer[1] += (quant_error * 7) / 16;
                 buffer[WIDTH_PLUS_ONE - 2] += (quant_error * 3) / 16;
                 buffer[WIDTH_PLUS_ONE - 1] += (quant_error * 5) / 16;
