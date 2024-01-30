@@ -2,6 +2,7 @@ use dither::{cga, DitherTarget};
 use embedded_graphics::{pixelcolor::Rgb888, prelude::*};
 use embedded_graphics_simulator::{OutputSettingsBuilder, SimulatorDisplay, Window};
 use tinybmp::Bmp;
+use nalgebra::Vector3;
 
 const WIDTH: usize = 256;
 const HEIGHT: usize = 383;
@@ -16,12 +17,20 @@ where
         + (a.b() as u16).abs_diff(c.b() as u16)
 }
 
-fn rgb_to_cga(x: Rgb888) -> cga::CGAColor {
-    cga::RGB_DISPLAY_PAIRS
+fn rgb_to_cga(x: Rgb888) -> (cga::CGAColor, Vector3<i16>) {
+    let m = cga::RGB_DISPLAY_PAIRS
         .iter()
         .min_by_key(|(_, rgb)| rgb_distance(x, *rgb))
-        .unwrap()
-        .0
+        .unwrap();
+
+    (
+        m.0,
+        Vector3::<i16>::new(
+            m.1.r().into(),
+            m.1.g().into(),
+            m.1.b().into()
+        )
+    )
 }
 
 fn cga_to_rgb(x: cga::CGAColor) -> Rgb888 {
@@ -43,9 +52,8 @@ fn main() -> Result<(), core::convert::Infallible> {
         '_,
         cga::FakeCGA<SimulatorDisplay<Rgb888>, _>,
         _,
-        _,
         { WIDTH + 1 },
-    > = DitherTarget::new(&mut cga, &rgb_to_cga, &cga_to_rgb);
+    > = DitherTarget::new(&mut cga, &rgb_to_cga);
     bmp.draw(&mut display).unwrap();
 
     Window::new("Mona Lisa", &OutputSettingsBuilder::new().build()).show_static(&simulator_display);
