@@ -57,8 +57,9 @@ where
     }
 }
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum CGAColor {
+    #[default]
     Black,
     DarkGray,
     Blue,

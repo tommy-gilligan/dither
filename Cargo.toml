@@ -4,10 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-nalgebra = { version = "*", default-features = false }
 embedded-graphics-core = "*"
 image = { version = "0.24.8", optional = true }
 viuer = { version = "0.7.1", optional = true }
+heapless = "*"
 
 [dev-dependencies]
 embedded-graphics-simulator = "0.6.0"
