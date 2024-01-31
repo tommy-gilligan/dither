@@ -100,7 +100,7 @@ where
         self.1.get(&color).unwrap().0
     }
 
-    pub fn with_error<I>(&self, index: I) -> (C, (i16, i16, i16))
+    pub fn with_error<I>(&self, index: I) -> (C, crate::QuantizationError)
     where
         I: RgbColor,
         C: Copy + core::hash::Hash + Copy + Clone,
@@ -111,11 +111,11 @@ where
 
         (
             self[index],
-            (
+            crate::QuantizationError::new((
                 r - self.center(self[index]).0 as i16,
                 g - self.center(self[index]).1 as i16,
                 b - self.center(self[index]).2 as i16,
-            ),
+            )),
         )
     }
 }

@@ -17,11 +17,12 @@ tinybmp = "0.5.0"
 [features]
 terminal = ["dep:viuer", "dep:image"]
 cga = []
+color_cube = []
 
 [[example]]
 name = "terminal"
-required-features = ["cga", "terminal"]
+required-features = ["cga", "terminal", "color_cube"]
 
 [[example]]
 name = "sdl"
-required-features = ["cga"]
+required-features = ["cga", "color_cube"]

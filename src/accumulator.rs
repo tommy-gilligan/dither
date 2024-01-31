@@ -1,7 +1,7 @@
 use embedded_graphics_core::pixelcolor::{Rgb888, RgbColor};
 
-#[derive(Copy, Clone, Default)]
-pub(crate) struct Accumulator(i16, i16, i16);
+#[derive(Copy, Clone, Default, Debug)]
+pub struct Accumulator(i16, i16, i16);
 
 impl Accumulator {
     pub fn new(tuple: (i16, i16, i16)) -> Self {
@@ -40,12 +40,12 @@ impl core::ops::Shr<i16> for Accumulator {
     }
 }
 
-impl core::convert::Into<Rgb888> for Accumulator {
-    fn into(self) -> Rgb888 {
+impl core::convert::From<Accumulator> for Rgb888 {
+    fn from(val: Accumulator) -> Self {
         Rgb888::new(
-            self.0.clamp(0, 255).try_into().unwrap_or(0x00),
-            self.1.clamp(0, 255).try_into().unwrap_or(0x00),
-            self.2.clamp(0, 255).try_into().unwrap_or(0x00),
+            val.0.clamp(0, 255).try_into().unwrap_or(0x00),
+            val.1.clamp(0, 255).try_into().unwrap_or(0x00),
+            val.2.clamp(0, 255).try_into().unwrap_or(0x00),
         )
     }
 }

@@ -1,14 +1,17 @@
 #![no_std]
 
 mod accumulator;
+mod wrapping_vec;
+
 #[cfg(feature = "cga")]
 pub mod cga;
+#[cfg(feature = "color_cube")]
 pub mod color_cube;
 #[cfg(feature = "terminal")]
 pub mod terminal;
-mod wrapping_vec;
 
 use accumulator::Accumulator;
+pub type QuantizationError = Accumulator;
 
 use embedded_graphics_core::{
     draw_target::DrawTarget,
@@ -20,7 +23,7 @@ use embedded_graphics_core::{
 
 pub struct DitherTarget<'a, Display, F, const WIDTH_PLUS_ONE: usize>
 where
-    F: Fn(Rgb888) -> (Display::Color, (i16, i16, i16)),
+    F: Fn(Rgb888) -> (Display::Color, QuantizationError),
     Display: DrawTarget + OriginDimensions,
 {
     display: &'a mut Display,
@@ -30,7 +33,7 @@ where
 
 impl<'a, Display, F, const WIDTH_PLUS_ONE: usize> DitherTarget<'a, Display, F, WIDTH_PLUS_ONE>
 where
-    F: Fn(Rgb888) -> (Display::Color, (i16, i16, i16)),
+    F: Fn(Rgb888) -> (Display::Color, QuantizationError),
     Display: DrawTarget + OriginDimensions,
 {
     pub fn new(display: &'a mut Display, closest_color_fn: &'a F) -> Self {
@@ -54,7 +57,7 @@ where
 impl<'a, Display, F, const WIDTH_PLUS_ONE: usize> DrawTarget
     for DitherTarget<'a, Display, F, WIDTH_PLUS_ONE>
 where
-    F: Fn(Rgb888) -> (Display::Color, (i16, i16, i16)),
+    F: Fn(Rgb888) -> (Display::Color, QuantizationError),
     Display: DrawTarget + OriginDimensions,
 {
     type Color = Rgb888;
@@ -70,14 +73,12 @@ where
 
         self.display.fill_contiguous(
             &Rectangle::new(Point::zero(), self.size()),
-            pixels.map(|finished_accumulator| {
-                let (closest_color, quantization_error): (Display::Color, (i16, i16, i16)) =
+            pixels.map(|horizon_pixel| {
+                let (dithered_color, quantization_error): (Display::Color, QuantizationError) =
                     (self.closest_color_fn)(self.accumulation_buffer[0].into());
 
-                let quantization_error = Accumulator::new(quantization_error);
-
                 // assert!(
-                //     (self.closest_color_fn)(closest_color_rgb) == closest_color
+                //     (self.closest_color_fn)(closest_color_rgb) == dithered_color
                 // );
 
                 self.accumulation_buffer[1] += (quantization_error * 7) >> 4;
@@ -85,9 +86,9 @@ where
                 self.accumulation_buffer[WIDTH_PLUS_ONE - 1] += (quantization_error * 5) >> 4;
                 self.accumulation_buffer[WIDTH_PLUS_ONE] += (quantization_error) >> 4;
 
-                self.accumulation_buffer.push(finished_accumulator);
+                self.accumulation_buffer.push(horizon_pixel);
 
-                closest_color
+                dithered_color
             }),
         )
     }
@@ -96,7 +97,7 @@ where
 impl<'a, Display, F, const WIDTH_PLUS_ONE: usize> OriginDimensions
     for DitherTarget<'a, Display, F, WIDTH_PLUS_ONE>
 where
-    F: Fn(Rgb888) -> (Display::Color, (i16, i16, i16)),
+    F: Fn(Rgb888) -> (Display::Color, QuantizationError),
     Display: DrawTarget + OriginDimensions,
 {
     fn size(&self) -> Size {
