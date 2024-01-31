@@ -24,6 +24,14 @@ impl core::ops::AddAssign for Accumulator {
     }
 }
 
+impl core::ops::Sub for Accumulator {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self {
+        Self(self.0 - rhs.0, self.1 - rhs.1, self.2 - rhs.2)
+    }
+}
+
 impl core::ops::Mul<i16> for Accumulator {
     type Output = Self;
 
