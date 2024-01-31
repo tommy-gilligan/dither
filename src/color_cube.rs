@@ -28,11 +28,48 @@ where
                     let b_8 = (255 / (N - 1)) as u8 * b as u8;
 
                     result.0[r][g][b] = f(r_8, g_8, b_8);
+                }
+            }
+        }
+        result.approximate_centers();
 
-                    if let Entry::Vacant(v) = result.1.entry(result.0[r][g][b]) {
+        Ok(result)
+    }
+
+    pub fn neighbours(&mut self, r: usize, g: usize, b: usize) -> heapless::Vec<&C, 26> {
+        let mut result = heapless::Vec::<&C, 26>::new();
+        for i in [-1isize, 0, 1] {
+            if (i + r as isize) < N as isize && (i + r as isize) >= 0 {
+                for j in [-1isize, 0, 1] {
+                    if (j + g as isize) < N as isize && (j + g as isize) >= 0 {
+                        for k in [-1isize, 0, 1] {
+                            if (k + b as isize) < N as isize && (k + b as isize) >= 0 {
+                                let _ = result.push(
+                                    &self.0[(i + r as isize) as usize][(j + g as isize) as usize]
+                                        [(k + b as isize) as usize],
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        result
+    }
+
+    pub fn approximate_centers(&mut self) {
+        self.1.clear();
+        for r in 0..N {
+            for g in 0..N {
+                for b in 0..N {
+                    let r_8 = (255 / (N - 1)) as u8 * r as u8;
+                    let g_8 = (255 / (N - 1)) as u8 * g as u8;
+                    let b_8 = (255 / (N - 1)) as u8 * b as u8;
+
+                    if let Entry::Vacant(v) = self.1.entry(self.0[r][g][b]) {
                         v.insert(((0, 0, 0), 0)).unwrap();
                     }
-                    if let Entry::Occupied(mut o) = result.1.entry(result.0[r][g][b]) {
+                    if let Entry::Occupied(mut o) = self.1.entry(self.0[r][g][b]) {
                         let b = o.get_mut();
 
                         *b = (
@@ -47,7 +84,7 @@ where
                 }
             }
         }
-        for (_, val) in result.1.iter_mut() {
+        for (_, val) in self.1.iter_mut() {
             *val = (
                 (
                     val.0 .0 / val.1 as u64,
@@ -57,8 +94,6 @@ where
                 val.1,
             );
         }
-
-        Ok(result)
     }
 
     fn center(&self, color: C) -> (u64, u64, u64) {

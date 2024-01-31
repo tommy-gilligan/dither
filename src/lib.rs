@@ -1,19 +1,22 @@
 #![no_std]
 
-use embedded_graphics_core::{
-    draw_target::DrawTarget,
-    geometry::{OriginDimensions, Point, Size},
-    pixelcolor::{Rgb888, RgbColor},
-    primitives::Rectangle,
-    Pixel,
-};
-
+mod accumulator;
 #[cfg(feature = "cga")]
 pub mod cga;
 pub mod color_cube;
 #[cfg(feature = "terminal")]
 pub mod terminal;
 mod wrapping_vec;
+
+use accumulator::Accumulator;
+
+use embedded_graphics_core::{
+    draw_target::DrawTarget,
+    geometry::{OriginDimensions, Point, Size},
+    pixelcolor::Rgb888,
+    primitives::Rectangle,
+    Pixel,
+};
 
 pub struct DitherTarget<'a, Display, F, const WIDTH_PLUS_ONE: usize>
 where
@@ -22,6 +25,7 @@ where
 {
     display: &'a mut Display,
     closest_color_fn: &'a F,
+    accumulation_buffer: crate::wrapping_vec::WrappingVec<Accumulator, WIDTH_PLUS_ONE>,
 }
 
 impl<'a, Display, F, const WIDTH_PLUS_ONE: usize> DitherTarget<'a, Display, F, WIDTH_PLUS_ONE>
@@ -33,7 +37,17 @@ where
         Self {
             display,
             closest_color_fn,
+            accumulation_buffer: crate::wrapping_vec::WrappingVec::new(&mut core::iter::repeat(
+                Accumulator::default(),
+            )),
         }
+    }
+
+    fn initialize_accumulation_buffer<I>(&mut self, pixels: &mut I)
+    where
+        I: Iterator<Item = Accumulator>,
+    {
+        self.accumulation_buffer = crate::wrapping_vec::WrappingVec::new(pixels);
     }
 }
 
@@ -50,46 +64,28 @@ where
     where
         I: IntoIterator<Item = Pixel<Self::Color>>,
     {
-        let mut vectors = pixels
-            .into_iter()
-            .map(|pixel| (pixel.1.r().into(), pixel.1.g().into(), pixel.1.b().into()));
-        let mut buffer: crate::wrapping_vec::WrappingVec<(i16, i16, i16), WIDTH_PLUS_ONE> =
-            crate::wrapping_vec::WrappingVec::new(&mut vectors);
+        let mut pixels = pixels.into_iter().map(|pixel| pixel.1.into());
+
+        self.initialize_accumulation_buffer(&mut pixels);
 
         self.display.fill_contiguous(
             &Rectangle::new(Point::zero(), self.size()),
-            vectors.map(|vector| {
-                let (closest_color, quant_error): (Display::Color, (i16, i16, i16)) =
-                    (self.closest_color_fn)(Rgb888::new(
-                        buffer[0].0.clamp(0, 255).try_into().unwrap_or(0x00),
-                        buffer[0].1.clamp(0, 255).try_into().unwrap_or(0x00),
-                        buffer[0].2.clamp(0, 255).try_into().unwrap_or(0x00),
-                    ));
+            pixels.map(|finished_accumulator| {
+                let (closest_color, quantization_error): (Display::Color, (i16, i16, i16)) =
+                    (self.closest_color_fn)(self.accumulation_buffer[0].into());
 
-                // assert!((self.closest_color_fn)(closest_color_rgb) == closest_color);
+                let quantization_error = Accumulator::new(quantization_error);
 
-                buffer[1] = (
-                    buffer[1].0 + (quant_error.0 * 7) / 16,
-                    buffer[1].1 + (quant_error.1 * 7) / 16,
-                    buffer[1].2 + (quant_error.2 * 7) / 16,
-                );
-                buffer[WIDTH_PLUS_ONE - 2] = (
-                    buffer[WIDTH_PLUS_ONE - 2].0 + (quant_error.0 * 3) / 16,
-                    buffer[WIDTH_PLUS_ONE - 2].1 + (quant_error.1 * 3) / 16,
-                    buffer[WIDTH_PLUS_ONE - 2].2 + (quant_error.2 * 3) / 16,
-                );
-                buffer[WIDTH_PLUS_ONE - 1] = (
-                    buffer[WIDTH_PLUS_ONE - 1].0 + (quant_error.0 * 5) / 16,
-                    buffer[WIDTH_PLUS_ONE - 1].1 + (quant_error.1 * 5) / 16,
-                    buffer[WIDTH_PLUS_ONE - 1].2 + (quant_error.2 * 5) / 16,
-                );
-                buffer[WIDTH_PLUS_ONE] = (
-                    buffer[WIDTH_PLUS_ONE].0 + (quant_error.0) / 16,
-                    buffer[WIDTH_PLUS_ONE].1 + (quant_error.1) / 16,
-                    buffer[WIDTH_PLUS_ONE].2 + (quant_error.2) / 16,
-                );
+                // assert!(
+                //     (self.closest_color_fn)(closest_color_rgb) == closest_color
+                // );
 
-                buffer.push(vector);
+                self.accumulation_buffer[1] += (quantization_error * 7) >> 4;
+                self.accumulation_buffer[WIDTH_PLUS_ONE - 2] += (quantization_error * 3) >> 4;
+                self.accumulation_buffer[WIDTH_PLUS_ONE - 1] += (quantization_error * 5) >> 4;
+                self.accumulation_buffer[WIDTH_PLUS_ONE] += (quantization_error) >> 4;
+
+                self.accumulation_buffer.push(finished_accumulator);
 
                 closest_color
             }),
