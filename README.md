@@ -1,10 +1,7 @@
 # TODO
 
-- genericize
-- (is heapless missing a useful data structure? wrappingvec)
 - offer basic API in addtion to embedded graphics
-- use looser bound than From<Rgb888> for Display::Color
-- defer rounding on accumulated quantization error
+- defer rounding on accumulated quantization error (or use wide enough fixed point)
 - decide whether or not to error on error being inconsistent with closest color
 - better separate utility stuff (terminal, cga, color cube)
 

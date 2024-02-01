@@ -1,4 +1,4 @@
-use embedded_graphics_core::pixelcolor::{Rgb888, RgbColor};
+use embedded_graphics_core::pixelcolor::{Rgb888, Bgr888, RgbColor};
 
 #[derive(Copy, Clone, Default, Debug)]
 pub struct Accumulator(i16, i16, i16);
@@ -48,12 +48,24 @@ impl core::ops::Shr<i16> for Accumulator {
     }
 }
 
+// TODO: find a way to do this generically
+// perhaps macro for now
 impl core::convert::From<Accumulator> for Rgb888 {
     fn from(val: Accumulator) -> Self {
         Rgb888::new(
-            val.0.clamp(0, 255).try_into().unwrap_or(0x00),
-            val.1.clamp(0, 255).try_into().unwrap_or(0x00),
-            val.2.clamp(0, 255).try_into().unwrap_or(0x00),
+            val.0.clamp(0, 255).try_into().unwrap_or_default(),
+            val.1.clamp(0, 255).try_into().unwrap_or_default(),
+            val.2.clamp(0, 255).try_into().unwrap_or_default(),
+        )
+    }
+}
+
+impl core::convert::From<Accumulator> for Bgr888 {
+    fn from(val: Accumulator) -> Self {
+        Bgr888::new(
+            val.1.clamp(0, 255).try_into().unwrap_or_default(),
+            val.2.clamp(0, 255).try_into().unwrap_or_default(),
+            val.0.clamp(0, 255).try_into().unwrap_or_default(),
         )
     }
 }
