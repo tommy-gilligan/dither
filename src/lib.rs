@@ -27,19 +27,19 @@ pub struct DitherTarget<'a, Display, C, F, const WIDTH: usize>
 where
     F: Fn(C) -> (Display::Color, QuantizationError),
     Display: DrawTarget + OriginDimensions,
-    C: PixelColor + From<Accumulator> + RgbColor
+    C: PixelColor + From<Accumulator> + RgbColor,
 {
     display: &'a mut Display,
     closest_color_fn: &'a F,
     accumulation_buffer: crate::wrapping_vec::WrappingVec<Accumulator, WIDTH>,
-    phantom: PhantomData<C>
+    phantom: PhantomData<C>,
 }
 
 impl<'a, Display, C, F, const WIDTH: usize> DitherTarget<'a, Display, C, F, WIDTH>
 where
     F: Fn(C) -> (Display::Color, QuantizationError),
     Display: DrawTarget + OriginDimensions,
-    C: PixelColor + From<Accumulator> + Into<Accumulator> + RgbColor
+    C: PixelColor + From<Accumulator> + Into<Accumulator> + RgbColor,
 {
     pub fn new(display: &'a mut Display, closest_color_fn: &'a F) -> Self {
         Self {
@@ -48,7 +48,7 @@ where
             accumulation_buffer: crate::wrapping_vec::WrappingVec::new(&mut core::iter::repeat(
                 Accumulator::default(),
             )),
-            phantom: PhantomData
+            phantom: PhantomData,
         }
     }
 
@@ -60,12 +60,11 @@ where
     }
 }
 
-impl<'a, Display, C, F, const WIDTH: usize> DrawTarget
-    for DitherTarget<'a, Display, C, F, WIDTH>
+impl<'a, Display, C, F, const WIDTH: usize> DrawTarget for DitherTarget<'a, Display, C, F, WIDTH>
 where
     F: Fn(C) -> (Display::Color, QuantizationError),
     Display: DrawTarget + OriginDimensions,
-    C: PixelColor + From<Accumulator> + RgbColor
+    C: PixelColor + From<Accumulator> + RgbColor,
 {
     type Color = C;
     type Error = Display::Error;
@@ -106,7 +105,7 @@ impl<'a, Display, C, F, const WIDTH: usize> OriginDimensions
 where
     F: Fn(C) -> (Display::Color, QuantizationError),
     Display: DrawTarget + OriginDimensions,
-    C: PixelColor + From<Accumulator> + RgbColor
+    C: PixelColor + From<Accumulator> + RgbColor,
 {
     fn size(&self) -> Size {
         self.display.size()

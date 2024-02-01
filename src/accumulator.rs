@@ -1,4 +1,4 @@
-use embedded_graphics_core::pixelcolor::{Rgb888, Bgr888, RgbColor};
+use embedded_graphics_core::pixelcolor::{Bgr888, Rgb888, RgbColor};
 
 #[derive(Copy, Clone, Default, Debug)]
 pub struct Accumulator(i16, i16, i16);
