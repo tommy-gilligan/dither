@@ -4,6 +4,9 @@
 - defer rounding on accumulated quantization error (or use wide enough fixed point)
 - decide whether or not to error on error being inconsistent with closest color
 - better separate utility stuff (terminal, cga, color cube)
+- arbitrary kernels
+- hilbert curve indexing
+- boustrophedon transform
 
 export LIBRARY_PATH="$LIBRARY_PATH:$(brew --prefix)/lib"
 
