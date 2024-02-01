@@ -43,7 +43,7 @@ fn main() -> Result<(), core::convert::Infallible> {
         .unwrap();
 
     let binding = |rgb| color_cube.with_error(rgb);
-    let mut display: DitherTarget<'_, cga::FakeCGA<SimulatorDisplay<Rgb888>, _>, Rgb888, _, { WIDTH + 1 }> =
+    let mut display: DitherTarget<'_, cga::FakeCGA<SimulatorDisplay<Rgb888>, _>, Rgb888, _, WIDTH> =
         DitherTarget::new(&mut cga, &binding);
 
     bmp.draw(&mut display).unwrap();

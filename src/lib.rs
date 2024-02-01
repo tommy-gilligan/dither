@@ -16,30 +16,30 @@ pub type QuantizationError = Accumulator;
 use embedded_graphics_core::{
     draw_target::DrawTarget,
     geometry::{OriginDimensions, Point, Size},
-    pixelcolor::{Rgb888, PixelColor},
+    pixelcolor::{PixelColor, RgbColor},
     primitives::Rectangle,
     Pixel,
 };
 
 use core::marker::PhantomData;
 
-pub struct DitherTarget<'a, Display, C, F, const WIDTH_PLUS_ONE: usize>
+pub struct DitherTarget<'a, Display, C, F, const WIDTH: usize>
 where
     F: Fn(C) -> (Display::Color, QuantizationError),
     Display: DrawTarget + OriginDimensions,
-    C: PixelColor + From<Accumulator>
+    C: PixelColor + From<Accumulator> + RgbColor
 {
     display: &'a mut Display,
     closest_color_fn: &'a F,
-    accumulation_buffer: crate::wrapping_vec::WrappingVec<Accumulator, WIDTH_PLUS_ONE>,
+    accumulation_buffer: crate::wrapping_vec::WrappingVec<Accumulator, WIDTH>,
     phantom: PhantomData<C>
 }
 
-impl<'a, Display, C, F, const WIDTH_PLUS_ONE: usize> DitherTarget<'a, Display, C, F, WIDTH_PLUS_ONE>
+impl<'a, Display, C, F, const WIDTH: usize> DitherTarget<'a, Display, C, F, WIDTH>
 where
     F: Fn(C) -> (Display::Color, QuantizationError),
     Display: DrawTarget + OriginDimensions,
-    C: PixelColor + From<Accumulator>
+    C: PixelColor + From<Accumulator> + Into<Accumulator> + RgbColor
 {
     pub fn new(display: &'a mut Display, closest_color_fn: &'a F) -> Self {
         Self {
@@ -60,14 +60,14 @@ where
     }
 }
 
-impl<'a, Display, C, F, const WIDTH_PLUS_ONE: usize> DrawTarget
-    for DitherTarget<'a, Display, C, F, WIDTH_PLUS_ONE>
+impl<'a, Display, C, F, const WIDTH: usize> DrawTarget
+    for DitherTarget<'a, Display, C, F, WIDTH>
 where
     F: Fn(C) -> (Display::Color, QuantizationError),
     Display: DrawTarget + OriginDimensions,
-    C: PixelColor + From<Accumulator>
+    C: PixelColor + From<Accumulator> + RgbColor
 {
-    type Color = Rgb888;
+    type Color = C;
     type Error = Display::Error;
 
     fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
@@ -89,9 +89,9 @@ where
                 // );
 
                 self.accumulation_buffer[1] += (quantization_error * 7) >> 4;
-                self.accumulation_buffer[WIDTH_PLUS_ONE - 2] += (quantization_error * 3) >> 4;
-                self.accumulation_buffer[WIDTH_PLUS_ONE - 1] += (quantization_error * 5) >> 4;
-                self.accumulation_buffer[WIDTH_PLUS_ONE] += (quantization_error) >> 4;
+                self.accumulation_buffer[WIDTH - 1] += (quantization_error * 3) >> 4;
+                self.accumulation_buffer[WIDTH] += (quantization_error * 5) >> 4;
+                self.accumulation_buffer[WIDTH + 1] += (quantization_error) >> 4;
 
                 self.accumulation_buffer.push(horizon_pixel);
 
@@ -101,12 +101,12 @@ where
     }
 }
 
-impl<'a, Display, C, F, const WIDTH_PLUS_ONE: usize> OriginDimensions
-    for DitherTarget<'a, Display, C, F, WIDTH_PLUS_ONE>
+impl<'a, Display, C, F, const WIDTH: usize> OriginDimensions
+    for DitherTarget<'a, Display, C, F, WIDTH>
 where
     F: Fn(C) -> (Display::Color, QuantizationError),
     Display: DrawTarget + OriginDimensions,
-    C: PixelColor + From<Accumulator>
+    C: PixelColor + From<Accumulator> + RgbColor
 {
     fn size(&self) -> Size {
         self.display.size()

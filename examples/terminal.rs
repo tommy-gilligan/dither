@@ -1,5 +1,4 @@
 use dither::color_cube;
-use dither::color_cube::ColorCube;
 use dither::{cga, terminal::SimulatorDisplay, DitherTarget};
 use embedded_graphics_core::{pixelcolor::Rgb888, prelude::*};
 use tinybmp::Bmp;
@@ -44,7 +43,7 @@ fn main() -> Result<(), core::convert::Infallible> {
 
     let binding = |rgb| color_cube.with_error(rgb);
 
-    let mut display: DitherTarget<'_, cga::FakeCGA<SimulatorDisplay, _>, Rgb888, _, { WIDTH + 1 }> =
+    let mut display: DitherTarget<'_, cga::FakeCGA<SimulatorDisplay, _>, Rgb888, _, WIDTH> =
         DitherTarget::new(&mut cga, &binding);
     bmp.draw(&mut display).unwrap();
 
