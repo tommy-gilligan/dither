@@ -16,25 +16,30 @@ pub type QuantizationError = Accumulator;
 use embedded_graphics_core::{
     draw_target::DrawTarget,
     geometry::{OriginDimensions, Point, Size},
-    pixelcolor::Rgb888,
+    pixelcolor::{Rgb888, PixelColor},
     primitives::Rectangle,
     Pixel,
 };
 
-pub struct DitherTarget<'a, Display, F, const WIDTH_PLUS_ONE: usize>
+use core::marker::PhantomData;
+
+pub struct DitherTarget<'a, Display, C, F, const WIDTH_PLUS_ONE: usize>
 where
-    F: Fn(Rgb888) -> (Display::Color, QuantizationError),
+    F: Fn(C) -> (Display::Color, QuantizationError),
     Display: DrawTarget + OriginDimensions,
+    C: PixelColor + From<Accumulator>
 {
     display: &'a mut Display,
     closest_color_fn: &'a F,
     accumulation_buffer: crate::wrapping_vec::WrappingVec<Accumulator, WIDTH_PLUS_ONE>,
+    phantom: PhantomData<C>
 }
 
-impl<'a, Display, F, const WIDTH_PLUS_ONE: usize> DitherTarget<'a, Display, F, WIDTH_PLUS_ONE>
+impl<'a, Display, C, F, const WIDTH_PLUS_ONE: usize> DitherTarget<'a, Display, C, F, WIDTH_PLUS_ONE>
 where
-    F: Fn(Rgb888) -> (Display::Color, QuantizationError),
+    F: Fn(C) -> (Display::Color, QuantizationError),
     Display: DrawTarget + OriginDimensions,
+    C: PixelColor + From<Accumulator>
 {
     pub fn new(display: &'a mut Display, closest_color_fn: &'a F) -> Self {
         Self {
@@ -43,6 +48,7 @@ where
             accumulation_buffer: crate::wrapping_vec::WrappingVec::new(&mut core::iter::repeat(
                 Accumulator::default(),
             )),
+            phantom: PhantomData
         }
     }
 
@@ -54,11 +60,12 @@ where
     }
 }
 
-impl<'a, Display, F, const WIDTH_PLUS_ONE: usize> DrawTarget
-    for DitherTarget<'a, Display, F, WIDTH_PLUS_ONE>
+impl<'a, Display, C, F, const WIDTH_PLUS_ONE: usize> DrawTarget
+    for DitherTarget<'a, Display, C, F, WIDTH_PLUS_ONE>
 where
-    F: Fn(Rgb888) -> (Display::Color, QuantizationError),
+    F: Fn(C) -> (Display::Color, QuantizationError),
     Display: DrawTarget + OriginDimensions,
+    C: PixelColor + From<Accumulator>
 {
     type Color = Rgb888;
     type Error = Display::Error;
@@ -94,11 +101,12 @@ where
     }
 }
 
-impl<'a, Display, F, const WIDTH_PLUS_ONE: usize> OriginDimensions
-    for DitherTarget<'a, Display, F, WIDTH_PLUS_ONE>
+impl<'a, Display, C, F, const WIDTH_PLUS_ONE: usize> OriginDimensions
+    for DitherTarget<'a, Display, C, F, WIDTH_PLUS_ONE>
 where
-    F: Fn(Rgb888) -> (Display::Color, QuantizationError),
+    F: Fn(C) -> (Display::Color, QuantizationError),
     Display: DrawTarget + OriginDimensions,
+    C: PixelColor + From<Accumulator>
 {
     fn size(&self) -> Size {
         self.display.size()
