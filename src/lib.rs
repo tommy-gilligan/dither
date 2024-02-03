@@ -9,6 +9,7 @@ pub mod cga;
 pub mod color_cube;
 #[cfg(feature = "terminal")]
 pub mod terminal;
+mod dither;
 
 use accumulator::Accumulator;
 pub type QuantizationError = Accumulator;

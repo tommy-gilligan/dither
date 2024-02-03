@@ -3,6 +3,7 @@ use core::ops::{Index, IndexMut};
 // weirdly carries N cells of v PLUS an extra v_n cell
 // this is a mechanism to hold N+1 without resorting to unstable const expr
 // complicates logic but at least it's somewhat hidden/isolated
+#[derive(Debug, PartialEq)]
 pub struct WrappingVec<X, const N: usize>
 where
     X: Default + Copy,
