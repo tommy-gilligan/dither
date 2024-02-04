@@ -32,7 +32,7 @@ where
 {
     display: &'a mut Display,
     closest_color_fn: &'a F,
-    accumulation_buffer: crate::wrapping_vec::WrappingVec<'a, Accumulator, WIDTH>,
+    // accumulation_buffer: crate::wrapping_vec::WrappingVec<'a, Accumulator, WIDTH>,
     phantom: PhantomData<C>,
 }
 
@@ -46,9 +46,9 @@ where
         Self {
             display,
             closest_color_fn,
-            accumulation_buffer: crate::wrapping_vec::WrappingVec::new(&mut core::iter::repeat(
-                Accumulator::default(),
-            ), &[]),
+            // accumulation_buffer: crate::wrapping_vec::WrappingVec::new(&mut core::iter::repeat(
+            //     Accumulator::default(),
+            // ), &[]),
             phantom: PhantomData,
         }
     }
@@ -57,7 +57,7 @@ where
     where
         I: Iterator<Item = Accumulator>,
     {
-        self.accumulation_buffer = crate::wrapping_vec::WrappingVec::new(pixels, &[]);
+        // self.accumulation_buffer = crate::wrapping_vec::WrappingVec::new(pixels, &[]);
     }
 }
 
@@ -78,26 +78,27 @@ where
 
         self.initialize_accumulation_buffer(&mut pixels);
 
-        self.display.fill_contiguous(
-            &Rectangle::new(Point::zero(), self.size()),
-            pixels.map(|horizon_pixel| {
-                let (dithered_color, quantization_error): (Display::Color, QuantizationError) =
-                    (self.closest_color_fn)(self.accumulation_buffer.next().unwrap().into());
+        // self.display.fill_contiguous(
+        //     &Rectangle::new(Point::zero(), self.size()),
+        //     pixels.map(|horizon_pixel| {
+        //         // let (dithered_color, quantization_error): (Display::Color, QuantizationError) =
+        //         //     (self.closest_color_fn)(self.accumulation_buffer.next().unwrap().into());
 
-                // assert!(
-                //     (self.closest_color_fn)(closest_color_rgb) == dithered_color
-                // );
+        //         // assert!(
+        //         //     (self.closest_color_fn)(closest_color_rgb) == dithered_color
+        //         // );
 
-                // self.accumulation_buffer[0] += (quantization_error * 7) >> 4;
-                // self.accumulation_buffer[WIDTH - 2] += (quantization_error * 3) >> 4;
-                // self.accumulation_buffer[WIDTH - 1] += (quantization_error * 5) >> 4;
-                // self.accumulation_buffer[WIDTH] += (quantization_error) >> 4;
+        //         // self.accumulation_buffer[0] += (quantization_error * 7) >> 4;
+        //         // self.accumulation_buffer[WIDTH - 2] += (quantization_error * 3) >> 4;
+        //         // self.accumulation_buffer[WIDTH - 1] += (quantization_error * 5) >> 4;
+        //         // self.accumulation_buffer[WIDTH] += (quantization_error) >> 4;
 
-                // self.accumulation_buffer.push(horizon_pixel);
+        //         // self.accumulation_buffer.push(horizon_pixel);
 
-                dithered_color
-            }),
-        )
+        //         dithered_color
+        //     }),
+        // )
+        Ok(())
     }
 }
 
