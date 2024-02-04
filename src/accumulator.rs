@@ -48,6 +48,22 @@ impl core::ops::Shr<i16> for Accumulator {
     }
 }
 
+impl core::ops::Mul<Accumulator> for Accumulator {
+    type Output = Self;
+
+    fn mul(self, rhs: Accumulator) -> Self {
+        unimplemented!()
+    }
+}
+
+impl core::ops::Div<Accumulator> for Accumulator {
+    type Output = Self;
+
+    fn div(self, rhs: Accumulator) -> Self {
+        unimplemented!()
+    }
+}
+
 // TODO: find a way to do this generically
 // perhaps macro for now
 impl core::convert::From<Accumulator> for Rgb888 {
