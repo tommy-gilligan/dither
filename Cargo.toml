@@ -1,28 +1,32 @@
+[workspace]
+members = ["cga", "terminal"]
+
 [package]
 name = "dither"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-embedded-graphics-core = "*"
-image = { version = "0.24.8", optional = true }
-viuer = { version = "0.7.1", optional = true }
-heapless = "*"
+embedded-graphics-core = { version = "*", optional = true }
+heapless = { version = "*", optional = true }
+fixed = "1.24.0"
 
 [dev-dependencies]
 embedded-graphics-simulator = "0.6.0"
 embedded-graphics = "0.8.1"
 tinybmp = "0.5.0"
+cga = { path = "./cga" }
+terminal = { path = "./terminal" }
 
 [features]
-terminal = ["dep:viuer", "dep:image"]
-cga = []
-color_cube = []
+default = ["embedded-graphics"]
+color-cube = ["dep:heapless"]
+embedded-graphics = ["dep:embedded-graphics-core"]
 
 [[example]]
 name = "terminal"
-required-features = ["cga", "terminal", "color_cube"]
+required-features = ["embedded-graphics"]
 
 [[example]]
 name = "sdl"
-required-features = ["cga", "color_cube"]
+required-features = ["embedded-graphics"]

@@ -1,0 +1,10 @@
+[package]
+name = "terminal"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+embedded-graphics-core = { version = "*" }
+image = { version = "0.24.8" }
+viuer = { version = "0.7.1" }
+cga = { path = "../cga" }
